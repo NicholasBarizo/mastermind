@@ -106,8 +106,11 @@ class Mastermind
       code.each_with_index do |code_color, code_index|
         if guess_color == code_color && guess_index == code_index
           positions[:right_position] += 1
+          break
         elsif guess_color == code_color && code_index > guess_index
+          puts "#{guess_color} #{guess_index} #{code_color} #{code_index} "
           positions[:wrong_position] += 1
+          break
         end
       end
     end
