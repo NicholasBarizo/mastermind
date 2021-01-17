@@ -2,42 +2,74 @@ class Mastermind
   def initialize; end
 
   def begin
-    play
+    puts 'Welcome to Mastermind!'
+    puts 'Do you want to be the codebreaker(1) or the codemaster(2)?'
+    player_role = gets.chomp.to_s
+    until player_role == '1' or player_role == '2'
+      puts 'Please enter 1 for codebreaker or 2 for codemaster'
+      player_role = gets.chomp.to_s
+    end
+      play_codebreaker if player_role == '1'
+      play_codemaster if player_role == '2'
   end
 
   private
 
-  def play
+  def play_codebreaker
     code = create_code
     12.downto(1) do |num|
       puts "You have #{num} guesses remaining"
       puts 'Choose four colors from the following: Red, Orange, Yellow, Green, Blue, Purple'
-      positions = determine_positions(guess, code)
+      positions = determine_positions(user_code, code)
       if positions[:right_position] < 4
         say_positions(positions)
       else
-        say_win(code)
+        say_codebreaker_win(code)
       end
     end
-    say_lose(code)
+    say_codebreaker_lose(code)
   end
 
-  def say_win(code)
+  def play_codemaster
+    puts 'Choose four colors from the following: Red, Orange, Yellow, Green, Blue, Purple'
+    code = user_code
+    set_colors = []
+    12.downto(1) do |try|
+      try_ending = try > 1 ? 'ies' : 'y'
+      puts "\nThe codebreaker has #{try} tr#{try_ending} remaining"
+      set_colors = determine_codebreaker_guess(code, try, set_colors) 
+      sleep(1.0 / 4)
+    end
+    say_codemaster_win
+  end
+
+  def say_codebreaker_win(code)
     puts "You win! The code was #{code.join(', ')}"
     puts 'Play Again? (y/n)'
-    play_again = gets.chomp.downcase
-    case play_again
-    when 'y'
-      Mastermind.new.begin
-    when 'n'
-      puts 'Goodbye!'
-      exit
-    end
+    prompt_play_again
   end
 
-  def say_lose(code)
+  def say_codebreaker_lose(code)
     puts "You have ran out of chances and lost! The code was #{code.join(', ')}"
     puts 'Try Again? (y/n)'
+    prompt_play_again
+  end
+
+  def say_codemaster_win
+    puts 'You Win!'
+    puts 'The codebreaker was unable to crack your code'
+    puts 'Play again?'
+    prompt_play_again
+  end
+
+  def say_codemaster_lose(try)
+    puts 'You Lose!'
+    puts "The codebreaker has cracked your code in #{12 - try} tries"
+    puts 'Try Again?'
+    prompt_play_again
+  end
+
+  def prompt_play_again
     play_again = gets.chomp.downcase
     case play_again
     when 'y'
@@ -47,7 +79,7 @@ class Mastermind
       exit
     end
   end
-
+  
   def say_positions(positions)
     puts "#{positions[:right_position]} of the guessed colors are in the correct position"
     puts "#{positions[:wrong_position]} of the guessed colors are in the incorrect position"
@@ -63,13 +95,26 @@ class Mastermind
     code
   end
 
-  def guess
+  def user_code
     input = gets.chomp.downcase.gsub(/,/, '').split
     allowed_input = require_four_colors(input)
     allowed_input.pop while allowed_input.length > 4
     unabbreviated_input = convert_color_abbreviation(allowed_input)
-    puts "You guessed: #{unabbreviated_input.join(', ')}"
-    unabbreviated_input 
+    puts "Your code: #{unabbreviated_input.join(', ')}"
+    unabbreviated_input
+  end
+
+  def determine_codebreaker_guess(code, try, set_colors)
+    guess = create_code
+    set_colors.each_with_index { |color, index| guess[index] = color unless set_colors[index].nil?}
+    code.each_with_index do |code_color, code_index|
+      guess.each_with_index do |guess_color, guess_index|
+        set_colors[code_index] = guess_color if code_color == guess_color && code_index == guess_index
+      end
+    end
+    print "The codebreaker has guessed #{guess.join(', ')}\n"
+    say_codemaster_lose(try) if guess == code
+    set_colors
   end
 
   def require_four_colors(input)
@@ -94,7 +139,7 @@ class Mastermind
       'b' => 'blue',
       'p' => 'purple'
     }
-    input.map { |color| color_translate[color] }
+    input.map { |color| color_translate.key?(color) ? color_translate[color] : color }
   end
 
   def determine_positions(guess_colors, code)
